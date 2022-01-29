@@ -1,27 +1,24 @@
 // Import and requiring express
 // const express = require('express');
-const artText = require('asciiart-logo');
+const figlet = require('figlet');
 //Import and require inquirer
 const inquirer = require('inquirer');
 // Import and require mysql2
 const mysql = require('mysql2');
-const cTable = require('console-table')
+require('console-table')
 //Require sequelize and the config/connection file for the password
 // const { Model, DataTypes } = require('sequelize');
 // const sequelize = require('./config/connection');
 
 
-//initial text that appears
-const logoText = logo({
-    name: 'Employee Tracker',
-    lineChars: 10,
-    padding: 2,
-    margin: 3,     
-    borderColor: 'green',
-    logoColor: 'green'
-}).render();
-
-console.log(logo);
+// figlet('Hello World!!', function(err, data) {
+//     if (err) {
+//         console.log('Something went wrong...');
+//         console.dir(err);
+//         return;
+//     }
+//     console.log(data)
+// });
 
 
 const db = mysql.createConnection(
@@ -53,21 +50,26 @@ function menuFunction() {
 
     ]).then ((choice) => {
         console.log(choice);
-        //choice option for veiw all departments
+        //choice option for 'view all departments'
         if (choice.listChoice === 'view all departments') {
             viewAlldept() 
-         //choice option for view all roles
+         //choice option for 'view all roles'
         }else if(choice.listChoice === 'view all roles'){
             viewAllroles()
-        //choice option for view all employees
+        //choice option for 'view all employees'
         }else if (choice.listChoice === 'view all employees'){
             viewAllemployees()
-        //choice option for add a department
+        //choice option for 'add a department'
         }else if (choice.listChoice === 'add a department'){
             addDepartment()
-
+            //choice option for 'upgrade employee '
+        }else if (choice.listChoice === 'add a role'){
+           addRole()
         }
-
+        //choice for option for 'add an employee'
+        else if (choice.listChoice === 'add an employee'){
+            addEmployee()
+        }
     } )
 
 }
@@ -80,9 +82,8 @@ function viewAlldept() {
             console.table(results);
         }
         menuFunction()
-    })
+    })}
 
-}
 //view all roles function
 function viewAllroles(){
 db.query('SELECT * FROM ROLE', (err, results) => {
@@ -91,13 +92,7 @@ if (err){
 }else {
     console.table(results);
     menuFunction()
- 
-}
-
-
-})
-
-}
+}})}
 //view all employees function
 function viewAllemployees(){
 db.query('SELECT * FROM EMPLOYEE', (err, results) => {
@@ -106,9 +101,7 @@ if (err){
 }else {
     console.table(results);
     menuFunction()
-}
-})
-}
+}})}
 //add a department function
 function addDepartment(){
     inquirer.prompt([
@@ -124,42 +117,95 @@ function addDepartment(){
                 console.log(err);
             }else console.log("new department added");
             menuFunction()
+        })   
+    })
+}
+//getting the departments so that they can be added to the prompt
 
-        })
-        
-
+db.query("SELECT * FROM department", function(error, res) {
+allDepartments = res.map(department => ({name: department.name, value: department.id}));
+})
+//add a role function
+function addRole(){
+    inquirer.prompt([
+        {
+        message: "What is the name of the role?",
+        name: "roleName",
+        type: "input",
+        },
+        {
+        message: "What is the salary of the role?",
+        name: "roleSalary",
+        type: "input",
+        },
+        {
+        type: "list",
+        message: "what is the role's department",
+        name: "roleDept",
+        choices: allDepartments
+        },
+    ]).then ((input) =>{
+        console.log(input);
+       db.query(`INSERT INTO role (title, salary, department_id) 
+       VALUES ('${input.roleName}', ${input.roleSalary}, ${input.roleDept})`, (err) => {
+           if (err){
+               console.log(err);
+           }else console.log("new role added");
+           menuFunction()
+       })
+    })
+}
+//getting the roles so that they can be added to the prompt
+db.query("SELECT * FROM role", function(error, res) {
+    allRoles = res.map(roles => ({name: roles.name, value: roles.id}));
     })
 
-   
+//add an employee function
+function addEmployee(){
+    inquirer.prompt([
+        {
+        message: "What is the name employee?",
+        name: "empFirst",
+        type: "input",
+        },
+        {
+        message: "What is the last name of the employee?",
+        name: "empLast",
+        type: "input",
+        },
+        {type: 'list',
+        message: "what is the employee's role?",
+        name: "empRole",
+        choices: allRoles
+        },
+        {
+            type: "list",
+            message: "who is the employee's manager?",
+            name: "empManager",
+            choices: ""
+        },
+     ]).then ((input) =>{
+        console.log(input);
+       db.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) 
+       VALUES ('${input.empFirst}', ${input.empLast}, ${input.empRole}, ${input.empManager})`, (err) => {
+           if (err){
+               console.log(err);
+           }else console.log("new employee added");
+           menuFunction()
+       })
+    })
 }
+
+
+
+
+
+
+
+
 //launch the menu
 menuFunction()
 
-
-
-
-
-
-
-// //inquirer questions
-// inquirer.prompt([
-//     {
-//         name: 'title',
-//         message: "What is the role?",
-//         type: 'input'
-//     },
-//     {
-//         name: 'salary',
-//         message: 'How much do they make?',
-//         type: 'input'
-//     },
-//     {
-//         name: 'department_id',
-//         message: 'What department does it belong to?',
-//         type: 'list',
-//         choices: departments
-//     }
-// ]).then
 
 
 
