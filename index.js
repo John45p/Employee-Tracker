@@ -1,25 +1,13 @@
 // Import and requiring express
 // const express = require('express');
-const figlet = require('figlet');
 //Import and require inquirer
 const inquirer = require('inquirer');
 // Import and require mysql2
 const mysql = require('mysql2');
+//import and require console-table
 require('console-table')
 //Require sequelize and the config/connection file for the password
-// const { Model, DataTypes } = require('sequelize');
 // const sequelize = require('./config/connection');
-
-
-// figlet('Hello World!!', function(err, data) {
-//     if (err) {
-//         console.log('Something went wrong...');
-//         console.dir(err);
-//         return;
-//     }
-//     console.log(data)
-// });
-
 
 const db = mysql.createConnection(
     {
@@ -27,12 +15,12 @@ const db = mysql.createConnection(
       // MySQL username,
       user: 'root',
       //Add MySQL password
-      password: 'Jq150010!',
+      password: '',
       database: 'employee_db'
     },
     console.log(`Connected to the employee database.`)
   );
-
+//launch initial menu
 function menuFunction() {
     inquirer.prompt([
         {type: 'list',
@@ -69,6 +57,10 @@ function menuFunction() {
         //choice for option for 'add an employee'
         else if (choice.listChoice === 'add an employee'){
             addEmployee()
+        }
+        //choice for option to 'upgrade an employee'
+        else if(choice.listChoice === 'upgrade an employee role'){
+            upgradeEmployee()
         }
     } )
 
@@ -111,7 +103,6 @@ function addDepartment(){
             type: "input",
         }
     ]).then((input)=>{
-        console.log(input)
         db.query(`INSERT INTO department (name) VALUES ('${input.deptADD}')`, (err) => {
             if (err){
                 console.log(err);
@@ -145,7 +136,6 @@ function addRole(){
         choices: allDepartments
         },
     ]).then ((input) =>{
-        console.log(input);
        db.query(`INSERT INTO role (title, salary, department_id) 
        VALUES ('${input.roleName}', ${input.roleSalary}, ${input.roleDept})`, (err) => {
            if (err){
@@ -155,16 +145,22 @@ function addRole(){
        })
     })
 }
-//getting the roles so that they can be added to the prompt
-db.query("SELECT * FROM role", function(error, res) {
-    allRoles = res.map(roles => ({name: roles.name, value: roles.id}));
-    })
 
-//add an employee function
+
+// getting the roles so that they can be added to the prompt
+db.query("SELECT * FROM role", function(error, res) {
+    allRoles = res.map(role => ({name: role.title, value: role.id}));
+    });
+    //getting the manager's names by excluding employees without manager_id
+db.query("SELECT first_name, last_name, id FROM employee WHERE manager_id IS NOT NULL", function(error, res) {
+        managerNames = res.map(employee => ({name: employee.first_name + ' ' + employee.last_name, value: employee.id}));
+    });
+
+// add an employee function
 function addEmployee(){
     inquirer.prompt([
         {
-        message: "What is the name employee?",
+        message: "What is the first name of the employee?",
         name: "empFirst",
         type: "input",
         },
@@ -174,20 +170,20 @@ function addEmployee(){
         type: "input",
         },
         {type: 'list',
-        message: "what is the employee's role?",
+        message: "what is the employee's role id?",
         name: "empRole",
         choices: allRoles
         },
         {
             type: "list",
-            message: "who is the employee's manager?",
+            message: "who is the employee's manager id?",
             name: "empManager",
-            choices: ""
+            choices: managerNames
         },
-     ]).then ((input) =>{
-        console.log(input);
+    ]).then ((input) =>{
+        console.log(input)
        db.query(`INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-       VALUES ('${input.empFirst}', ${input.empLast}, ${input.empRole}, ${input.empManager})`, (err) => {
+       VALUES ("${input.empFirst}", "${input.empLast}", "${input.empRole}", "${input.empManager}")`, (err) => {
            if (err){
                console.log(err);
            }else console.log("new employee added");
@@ -195,10 +191,39 @@ function addEmployee(){
        })
     })
 }
+//selects the employees and their values
+db.query("SELECT * FROM employee", function(error, res) {
+    employeeList = res.map(employs => ({name: employs.first_name + ' ' + employs.last_name, value: employs.id}));
+});
+//employee upgrade function
+function upgradeEmployee(){
+    inquirer.prompt([
+        {
+        message: "Which employee would you like to upgrade?",
+        name: "upChoice",
+        type: "list",
+        choices: employeeList
+        },
+        {
+            type: 'list',
+        message: "what role would you like to assign to the employee?",
+        name: "upRole",
+         choices: allRoles
+        },
+       
+    ]).then ((input) =>{
+        var updatedemployee = input.upChoice;
+        var updatedRole = input.upRole;
+        const allUpdates = `UPDATE employee SET role_id = "${updatedRole}" WHERE id = "${updatedemployee}"`;
+        db.query(allUpdates, function (err, res){
+            if (err){
+                console.log(err);
+            }else console.log("Employee Updated!")
+            menuFunction()
 
-
-
-
+        })
+    })
+}
 
 
 
